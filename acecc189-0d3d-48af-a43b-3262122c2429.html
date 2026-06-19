@@ -1,0 +1,713 @@
+<!-- QuestMaster — seguimiento de objetivos gamificado, temática Minecraft -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>QuestMaster</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#15161b;
+    --panel:#23252e;
+    --panel2:#2b2e39;
+    --line:#0c0d11;
+    --hi:#3a3e4d;        /* bevel light */
+    --lo:#101116;        /* bevel dark */
+    --text:#e9eaf0;
+    --dim:#9aa0b0;
+    --xp:#6fdc3a;        /* minecraft xp green */
+    --xpglow:#a8ff6a;
+    /* categorías */
+    --c-trabajo:#d6432f;
+    --c-mental:#a861e6;
+    --c-fisica:#3fbf5f;
+    --c-ocio:#36c5d0;
+    --c-necesario:#9aa0a6;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text)}
+  body{
+    font-family:"VT323",ui-monospace,monospace;
+    font-size:21px;line-height:1.25;
+    background:
+      radial-gradient(circle at 50% -10%, #20222c 0%, var(--bg) 55%);
+    min-height:100vh;
+    padding-bottom:84px;
+    overflow-x:hidden;
+  }
+  .px{font-family:"Press Start 2P",monospace;}
+  img,.block-ico{image-rendering:pixelated}
+
+  /* ---- Minecraft-style beveled box ---- */
+  .mc{
+    background:var(--panel);
+    border:3px solid var(--line);
+    box-shadow:
+      inset 3px 3px 0 var(--hi),
+      inset -3px -3px 0 var(--lo);
+  }
+  .mc-btn{
+    background:var(--panel2);
+    border:3px solid var(--line);
+    box-shadow:inset 3px 3px 0 var(--hi), inset -3px -3px 0 var(--lo);
+    color:var(--text);
+    font-family:"Press Start 2P",monospace;
+    font-size:11px;
+    padding:12px 14px;
+    cursor:pointer;
+    letter-spacing:.5px;
+    transition:transform .04s;
+  }
+  .mc-btn:active{transform:translateY(2px);box-shadow:inset 2px 2px 0 var(--hi), inset -2px -2px 0 var(--lo);}
+  .mc-btn.go{background:#2f7d3a}
+  .mc-btn.go:active{background:#2a6f34}
+
+  /* ---- header ---- */
+  header{
+    position:sticky;top:0;z-index:30;
+    padding:12px 12px 10px;
+    background:linear-gradient(#1b1d25,#15161b);
+    border-bottom:3px solid var(--line);
+  }
+  .rankrow{display:flex;align-items:center;gap:12px}
+  .block-ico{
+    width:58px;height:58px;flex:0 0 58px;position:relative;
+    border:3px solid #000;
+    box-shadow:inset 4px 4px 0 rgba(255,255,255,.28), inset -5px -5px 0 rgba(0,0,0,.45);
+  }
+  .rankmeta{flex:1;min-width:0}
+  .rankname{font-size:13px;letter-spacing:.5px}
+  .ranksub{color:var(--dim);font-size:18px;margin-top:2px}
+  .xpwrap{margin-top:8px}
+  .xpbar{
+    height:16px;background:#0a0b0e;border:3px solid #000;position:relative;overflow:hidden;
+    box-shadow:inset 2px 2px 0 rgba(255,255,255,.08);
+  }
+  .xpfill{height:100%;background:var(--xp);box-shadow:0 0 8px var(--xpglow);transition:width .5s cubic-bezier(.2,.9,.2,1)}
+  .xptxt{display:flex;justify-content:space-between;font-size:17px;color:var(--dim);margin-top:3px}
+  .xptxt b{color:var(--xpglow)}
+
+  /* ---- views ---- */
+  main{padding:12px;max-width:560px;margin:0 auto}
+  .view{display:none}
+  .view.on{display:block}
+  h2.sec{font-family:"Press Start 2P",monospace;font-size:13px;margin:6px 2px 14px;color:#fff;letter-spacing:.5px}
+  .daylabel{color:var(--dim);font-size:18px;margin:-8px 2px 14px}
+
+  /* ---- item cards ---- */
+  .card{
+    display:flex;align-items:center;gap:11px;padding:11px;margin-bottom:10px;position:relative;
+  }
+  .cat-dot{width:14px;height:14px;flex:0 0 14px;border:2px solid #000;align-self:flex-start;margin-top:5px}
+  .info{flex:1;min-width:0}
+  .name{font-size:22px;line-height:1.05;word-break:break-word}
+  .meta{font-size:17px;color:var(--dim);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .streak{color:#ff9a3c}
+  .tick{
+    width:46px;height:46px;flex:0 0 46px;border:3px solid #000;background:#1b1d24;cursor:pointer;
+    box-shadow:inset 3px 3px 0 var(--hi), inset -3px -3px 0 var(--lo);
+    display:flex;align-items:center;justify-content:center;font-size:26px;color:#3a3e4d;
+  }
+  .tick:active{transform:translateY(2px)}
+  .card.done{opacity:.55}
+  .card.done .tick{background:#2f7d3a;color:#bdffb0;box-shadow:inset 3px 3px 0 #4fae5c, inset -3px -3px 0 #1c4d24}
+  .card.due .tick{border-color:#ffcf3a;box-shadow:inset 3px 3px 0 #ffe28a, inset -3px -3px 0 #8a6a10;color:#ffcf3a}
+  .card.overdue{animation:pulseRed 1s steps(2) infinite}
+  .card.overdue .name{color:#ff6a5a}
+  @keyframes pulseRed{0%{box-shadow:inset 3px 3px 0 var(--hi), inset -3px -3px 0 var(--lo)}50%{box-shadow:inset 0 0 0 2px #ff3b2f, 0 0 10px rgba(255,59,47,.5)}}
+  .pill{font-size:15px;padding:1px 7px;border:2px solid #000;background:#1b1d24}
+  .empty{color:var(--dim);text-align:center;padding:34px 14px;font-size:19px}
+  .empty .px{font-size:11px;color:#5a5f70;display:block;margin-bottom:10px}
+
+  /* ---- add form ---- */
+  .seg{display:flex;gap:8px;margin-bottom:14px}
+  .seg .mc-btn{flex:1}
+  .seg .mc-btn.act{background:#3a3e4d}
+  label.fld{display:block;margin:0 0 12px}
+  label.fld .lab{font-family:"Press Start 2P",monospace;font-size:10px;color:var(--dim);display:block;margin-bottom:6px}
+  input,select{
+    width:100%;font-family:"VT323",monospace;font-size:21px;color:var(--text);
+    background:#0e0f13;border:3px solid #000;padding:10px;
+    box-shadow:inset 2px 2px 0 rgba(0,0,0,.5);
+  }
+  .catpick{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+  .catopt{display:flex;align-items:center;gap:8px;padding:9px;cursor:pointer;font-size:18px}
+  .catopt.act{outline:3px solid var(--xpglow)}
+  .catopt .sw{width:16px;height:16px;border:2px solid #000;flex:0 0 16px}
+
+  /* ---- stats ---- */
+  .week{display:flex;gap:6px;align-items:flex-end;height:130px;padding:10px;margin-bottom:14px}
+  .dcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end}
+  .bar{width:100%;background:#0a0b0e;border:2px solid #000;position:relative;flex:1;display:flex;align-items:flex-end}
+  .barfill{width:100%;background:var(--xp);transition:height .5s}
+  .dname{font-size:15px;color:var(--dim)}
+  .dpct{font-size:14px;color:var(--xpglow)}
+  .statgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .stat{padding:12px;text-align:center}
+  .stat .big{font-family:"Press Start 2P",monospace;font-size:18px;color:#fff}
+  .stat .lbl{font-size:16px;color:var(--dim);margin-top:6px}
+  .catbar{margin-bottom:9px}
+  .catbar .top{display:flex;justify-content:space-between;font-size:17px;margin-bottom:3px}
+  .catbar .track{height:12px;background:#0a0b0e;border:2px solid #000}
+  .catbar .fillc{height:100%}
+
+  /* ---- ranks ladder ---- */
+  .ladder .rk{display:flex;align-items:center;gap:12px;padding:9px 11px;margin-bottom:8px}
+  .ladder .rk.cur{outline:3px solid var(--xpglow)}
+  .ladder .rk.locked{opacity:.45}
+  .rk .nm{flex:1}
+  .rk .nm .t{font-size:20px}
+  .rk .nm .x{font-size:15px;color:var(--dim)}
+  .rk .chk{font-size:20px}
+
+  /* ---- bottom nav (hotbar) ---- */
+  nav{
+    position:fixed;left:0;right:0;bottom:0;z-index:40;
+    display:flex;gap:4px;padding:8px;justify-content:center;
+    background:#0e0f13;border-top:3px solid #000;
+  }
+  .slot{
+    width:60px;height:60px;border:3px solid #000;background:#1b1d24;
+    box-shadow:inset 3px 3px 0 #33384a, inset -3px -3px 0 var(--lo);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;
+    font-size:24px;
+  }
+  .slot .t{font-size:11px;color:var(--dim);font-family:"VT323";line-height:1}
+  .slot.on{outline:4px solid #fff;outline-offset:-2px;background:#2b2e39}
+
+  /* ---- celebration ---- */
+  #celebrate{position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;pointer-events:none}
+  #celebrate.show{display:flex}
+  .cele-card{
+    text-align:center;padding:26px 30px;background:rgba(20,22,28,.92);
+    border:4px solid #000;box-shadow:inset 4px 4px 0 var(--hi), inset -4px -4px 0 var(--lo), 0 0 0 3px var(--xpglow);
+    animation:pop .35s cubic-bezier(.2,1.4,.4,1);
+  }
+  @keyframes pop{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
+  .cele-card .px{font-size:15px;color:#fff;margin-bottom:10px}
+  .cele-card .xpgain{font-family:"Press Start 2P";font-size:22px;color:var(--xpglow);text-shadow:0 0 10px var(--xp)}
+  .particle{position:fixed;width:12px;height:12px;z-index:88;pointer-events:none;border:1px solid rgba(0,0,0,.4)}
+
+  /* ---- toast ---- */
+  #toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);z-index:70;
+    opacity:0;transition:.3s;max-width:90%;}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #toast .mc{padding:11px 16px;font-size:19px}
+
+  /* ---- rankup banner ---- */
+  #rankup{position:fixed;inset:0;z-index:95;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.7);pointer-events:none}
+  #rankup.show{display:flex}
+  .rub{text-align:center;padding:30px;animation:pop .4s cubic-bezier(.2,1.4,.4,1)}
+  .rub .lvlup{font-family:"Press Start 2P";font-size:13px;color:var(--xpglow);letter-spacing:1px;margin-bottom:14px;text-shadow:0 0 8px var(--xp)}
+  .rub .big-block{width:96px;height:96px;margin:0 auto 14px;border:4px solid #000;box-shadow:inset 5px 5px 0 rgba(255,255,255,.28), inset -6px -6px 0 rgba(0,0,0,.45)}
+  .rub .rn{font-family:"Press Start 2P";font-size:18px;color:#fff}
+
+  .help{font-size:18px;color:var(--dim);padding:12px;margin-top:6px}
+  .help b{color:var(--text)}
+  .help ul{margin:8px 0 0;padding-left:20px}
+  .help li{margin-bottom:5px}
+</style>
+
+<header>
+  <div class="rankrow">
+    <div id="rankBlock" class="block-ico"></div>
+    <div class="rankmeta">
+      <div class="rankname px" id="rankName">Hierro III</div>
+      <div class="ranksub" id="rankSub">Empieza tu camino</div>
+      <div class="xpwrap">
+        <div class="xpbar"><div class="xpfill" id="xpFill" style="width:0%"></div></div>
+        <div class="xptxt"><span id="xpNow">0 XP</span><span>Próximo: <b id="xpNext">120</b></span></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- HOY -->
+  <section class="view on" id="v-hoy">
+    <h2 class="sec">⛏ Hoy</h2>
+    <div class="daylabel" id="dayLabel"></div>
+    <div id="hoyList"></div>
+  </section>
+
+  <!-- TAREAS -->
+  <section class="view" id="v-tareas">
+    <h2 class="sec">📦 Tareas con fecha</h2>
+    <div id="taskList"></div>
+  </section>
+
+  <!-- STATS -->
+  <section class="view" id="v-stats">
+    <h2 class="sec">📊 Tu semana</h2>
+    <div class="mc week" id="weekChart"></div>
+    <div class="statgrid">
+      <div class="mc stat"><div class="big" id="stWeek">0%</div><div class="lbl">cumplido (7d)</div></div>
+      <div class="mc stat"><div class="big" id="stStreak">0</div><div class="lbl">mejor racha</div></div>
+      <div class="mc stat"><div class="big" id="stToday">0/0</div><div class="lbl">hábitos hoy</div></div>
+      <div class="mc stat"><div class="big" id="stDone">0</div><div class="lbl">tareas hechas</div></div>
+    </div>
+    <h2 class="sec" style="font-size:11px">Por categoría (7d)</h2>
+    <div id="catStats"></div>
+  </section>
+
+  <!-- RANGOS -->
+  <section class="view" id="v-rangos">
+    <h2 class="sec">🏔 Rangos</h2>
+    <div class="daylabel">Sube con constancia. Falla y bajas. Independencia adulta = nivel a nivel.</div>
+    <div class="ladder" id="ladder"></div>
+  </section>
+
+  <!-- AÑADIR -->
+  <section class="view" id="v-add">
+    <h2 class="sec">➕ Añadir objetivo</h2>
+    <div class="seg">
+      <button class="mc-btn act" id="tabHabit" onclick="setAddMode('habit')">Hábito diario</button>
+      <button class="mc-btn" id="tabTask" onclick="setAddMode('task')">Tarea con fecha</button>
+    </div>
+    <label class="fld"><span class="lab">Nombre</span><input id="addName" maxlength="60" placeholder="Ej: Meditar 10 min"></label>
+    <label class="fld"><span class="lab">Categoría</span></label>
+    <div class="catpick" id="catPick"></div>
+    <label class="fld" id="fldTime" style="margin-top:12px"><span class="lab">Hora (recordatorio)</span><input id="addTime" type="time" value="08:00"></label>
+    <label class="fld" id="fldDeadline" style="display:none;margin-top:12px"><span class="lab">Fecha límite</span><input id="addDeadline" type="datetime-local"></label>
+    <button class="mc-btn go" style="width:100%;margin-top:6px" onclick="addItem()">Colocar bloque ⛏</button>
+    <div class="help">
+      <b>Cómo funciona</b>
+      <ul>
+        <li>Hábito hecho: <b>+10 XP</b> (Salud mental ×1.5)</li>
+        <li>Racha: bonus a los 3, 7, 14 y 30 días</li>
+        <li>Tarea a tiempo: <b>+25</b>. Tarde: +12</li>
+        <li>Hábito no hecho a medianoche: <b>−8</b> y racha a 0</li>
+        <li>Tarea vencida: <b>−5</b> y se pone roja</li>
+        <li>No se borran objetivos: solo se completan</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <div class="slot on" data-v="hoy" onclick="go('hoy')">⛏<span class="t">Hoy</span></div>
+  <div class="slot" data-v="tareas" onclick="go('tareas')">📦<span class="t">Tareas</span></div>
+  <div class="slot" data-v="stats" onclick="go('stats')">📊<span class="t">Stats</span></div>
+  <div class="slot" data-v="rangos" onclick="go('rangos')">🏔<span class="t">Rangos</span></div>
+  <div class="slot" data-v="add" onclick="go('add')">➕<span class="t">Añadir</span></div>
+</nav>
+
+<div id="celebrate"><div class="cele-card"><div class="px" id="celeMsg">¡Bloque colocado!</div><div class="xpgain" id="celeXp">+10 XP</div></div></div>
+<div id="rankup"><div class="rub"><div class="lvlup">¡SUBES DE RANGO!</div><div class="big-block" id="ruBlock"></div><div class="rn px" id="ruName"></div></div></div>
+<div id="toast"><div class="mc"></div></div>
+
+<script>
+const KEY = "questmaster_state_v1";
+
+const CATS = {
+  trabajo:   {label:"Trabajo",            color:"var(--c-trabajo)",   raw:"#d6432f", weight:1.0},
+  mental:    {label:"Salud mental",       color:"var(--c-mental)",    raw:"#a861e6", weight:1.5},
+  fisica:    {label:"Salud física",       color:"var(--c-fisica)",    raw:"#3fbf5f", weight:1.0},
+  ocio:      {label:"Ocio / Tiempo libre",color:"var(--c-ocio)",      raw:"#36c5d0", weight:1.0},
+  necesario: {label:"Necesario",          color:"var(--c-necesario)", raw:"#9aa0a6", weight:1.0},
+};
+
+// Rangos Minecraft. min = XP total acumulado para alcanzarlo.
+const RANKS = [
+  {name:"Hierro III", min:0,    color:"#b9b9b9", txt:"#111"},
+  {name:"Hierro II",  min:120,  color:"#c3c3c3", txt:"#111"},
+  {name:"Hierro I",   min:280,  color:"#cdcdcd", txt:"#111"},
+  {name:"Bronce",     min:520,  color:"#c17a3a", txt:"#1a0e00"},
+  {name:"Plata",      min:850,  color:"#dde1ee", txt:"#111"},
+  {name:"Oro",        min:1300, color:"#f5c518", txt:"#1a1300"},
+  {name:"Platino",    min:1900, color:"#bfeef0", txt:"#062021"},
+  {name:"Esmeralda",  min:2700, color:"#17c964", txt:"#03250f"},
+  {name:"Diamante",   min:3800, color:"#4fd6e0", txt:"#04282b"},
+  {name:"Obsidiana",  min:5300, color:"#2a1840", txt:"#e9d6ff"},
+  {name:"Campeón",    min:7500, color:"#5a1f8c", txt:"#ffd6ff", glow:"#d65bff"},
+];
+
+const SUBS = ["Empieza tu camino","Construyendo base","Cogiendo ritmo","El mineral mejora",
+  "Brillas más","Vas en serio","Resistente","Te respetan","Casi inquebrantable","Élite","Cima alcanzada"];
+
+const PRAISE = ["¡Bloque colocado!","¡Buen pico!","¡Sigues minando!","¡Eso es constancia!",
+  "¡Tú mandas!","¡Día más fuerte!","¡A por el siguiente!","¡Inquebrantable!","¡Crafteando hábitos!","¡Diamante puro!"];
+
+let state = null;
+let addMode = "habit";
+let addCat = "trabajo";
+const alerted = new Set();   // recordatorios ya sonados esta sesión
+let audioCtx = null;
+
+// ---------- fechas ----------
+const todayStr = ()=> new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local
+function dateStr(d){ return d.toLocaleDateString('en-CA'); }
+function daysBetween(a,b){ // array de YYYY-MM-DD desde a (excl) hasta b (excl)
+  const out=[]; const da=new Date(a+"T00:00:00"); const db=new Date(b+"T00:00:00");
+  da.setDate(da.getDate()+1);
+  while(da<db){ out.push(dateStr(da)); da.setDate(da.getDate()+1); }
+  return out;
+}
+
+// ---------- persistencia ----------
+async function load(){
+  try{ const r = await window.storage.get(KEY); if(r && r.value) return JSON.parse(r.value); }catch(e){}
+  return null;
+}
+async function save(){
+  try{ await window.storage.set(KEY, JSON.stringify(state)); }
+  catch(e){ console.error("save fail",e); }
+}
+
+function freshState(){
+  return { version:1, xp:0, habits:[], tasks:[], lastReset: todayStr(), maxRankIdx:0 };
+}
+
+// ---------- lógica de rangos ----------
+function rankIdxFor(xp){
+  let i=0; for(let k=0;k<RANKS.length;k++){ if(xp>=RANKS[k].min) i=k; } return i;
+}
+function applyXp(delta){
+  const before = rankIdxFor(state.xp);
+  state.xp = Math.max(0, state.xp + delta);
+  const after = rankIdxFor(state.xp);
+  if(after>before){ // subió de rango ahora mismo
+    state.maxRankIdx = Math.max(state.maxRankIdx, after);
+    showRankUp(after);
+  }
+}
+
+// ---------- rachas ----------
+function streakOf(h){
+  // días consecutivos terminando hoy (o ayer si hoy aún no hecho)
+  const set = new Set(h.completedDates||[]);
+  let count=0; let d=new Date();
+  if(!set.has(dateStr(d))){ d.setDate(d.getDate()-1); if(!set.has(dateStr(d))) return 0; }
+  while(set.has(dateStr(d))){ count++; d.setDate(d.getDate()-1); }
+  return count;
+}
+
+// ---------- reset de medianoche ----------
+function processMissedDays(){
+  const today = todayStr();
+  if(state.lastReset === today) return false;
+  const missedDays = daysBetween(state.lastReset, today);
+  // incluir el propio lastReset como día evaluable? Sí: si ese día no se hizo, penaliza.
+  const evalDays = [state.lastReset, ...missedDays];
+  let penalized=false;
+  for(const day of evalDays){
+    if(day===today) continue;
+    for(const h of state.habits){
+      const created = (h.createdAt||"").slice(0,10);
+      if(created && created > day) continue;            // no existía
+      const done = (h.completedDates||[]).includes(day);
+      if(!done){ applyXp(-8); penalized=true; }
+    }
+  }
+  state.lastReset = today;
+  return penalized;
+}
+
+// ---------- acciones ----------
+function completeHabit(id){
+  const h = state.habits.find(x=>x.id===id); if(!h) return;
+  const t = todayStr();
+  if((h.completedDates||[]).includes(t)) return;
+  h.completedDates = h.completedDates||[]; h.completedDates.push(t);
+  const w = CATS[h.cat].weight;
+  let gain = Math.round(10*w);
+  applyXp(gain);
+  // bonus de racha
+  const s = streakOf(h);
+  let bonus=0;
+  if(s===3)bonus=5; else if(s===7)bonus=15; else if(s===14)bonus=30; else if(s===30)bonus=60;
+  if(bonus){ applyXp(bonus); }
+  h.best = Math.max(h.best||0, s);
+  save(); celebrate(gain+bonus, s>=3? `¡Racha de ${s}! 🔥` : null);
+  render();
+}
+function completeTask(id){
+  const tk = state.tasks.find(x=>x.id===id); if(!tk || tk.done) return;
+  tk.done=true; tk.doneAt=new Date().toISOString();
+  const w = CATS[tk.cat].weight;
+  const onTime = new Date() <= new Date(tk.deadline);
+  let gain = Math.round((onTime?25:12)*w);
+  applyXp(gain);
+  save(); celebrate(gain, onTime? "¡A tiempo! 📦" : "Hecho (tarde)");
+  render();
+}
+function checkOverdueTasks(){
+  const now=new Date(); let changed=false;
+  for(const tk of state.tasks){
+    if(tk.done) continue;
+    if(now > new Date(tk.deadline) && !tk.penalized){ tk.penalized=true; applyXp(-5); changed=true; }
+  }
+  if(changed) save();
+}
+
+function addItem(){
+  const name = document.getElementById('addName').value.trim();
+  if(!name){ toast("Ponle un nombre"); return; }
+  if(addMode==='habit'){
+    const time = document.getElementById('addTime').value || "08:00";
+    state.habits.push({id:uid(),name,cat:addCat,time,createdAt:new Date().toISOString(),completedDates:[],best:0});
+    toast("Hábito añadido");
+  }else{
+    const dl = document.getElementById('addDeadline').value;
+    if(!dl){ toast("Pon una fecha límite"); return; }
+    state.tasks.push({id:uid(),name,cat:addCat,deadline:new Date(dl).toISOString(),createdAt:new Date().toISOString(),done:false,penalized:false});
+    toast("Tarea añadida");
+  }
+  document.getElementById('addName').value="";
+  save(); render(); go(addMode==='habit'?'hoy':'tareas');
+}
+const uid = ()=> Math.random().toString(36).slice(2,9)+Date.now().toString(36);
+
+// ---------- render ----------
+function render(){
+  renderHeader(); renderHoy(); renderTasks(); renderStats(); renderLadder();
+}
+
+function blockStyle(r){
+  let bg = r.color;
+  let extra = r.glow ? `box-shadow:inset 4px 4px 0 rgba(255,255,255,.3), inset -5px -5px 0 rgba(0,0,0,.45), 0 0 14px ${r.glow};` : "";
+  return `background:${bg};${extra}`;
+}
+function renderHeader(){
+  const idx = rankIdxFor(state.xp);
+  const r = RANKS[idx];
+  document.getElementById('rankBlock').setAttribute('style', blockStyle(r));
+  document.getElementById('rankName').textContent = r.name;
+  document.getElementById('rankName').style.color = "#fff";
+  document.getElementById('rankSub').textContent = SUBS[idx];
+  const next = RANKS[idx+1];
+  const lo = r.min, hi = next? next.min : r.min;
+  const pct = next? Math.min(100, Math.round((state.xp-lo)/(hi-lo)*100)) : 100;
+  document.getElementById('xpFill').style.width = pct+"%";
+  document.getElementById('xpNow').textContent = state.xp+" XP";
+  document.getElementById('xpNext').textContent = next? next.min+" ("+RANKS[idx+1].name+")" : "MÁX";
+}
+
+function dot(cat){ return `<span class="cat-dot" style="background:${CATS[cat].raw}"></span>`; }
+
+function renderHoy(){
+  document.getElementById('dayLabel').textContent =
+    new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
+  const t = todayStr(); const now=new Date();
+  const list = document.getElementById('hoyList');
+  if(state.habits.length===0){
+    list.innerHTML = `<div class="mc empty"><span class="px">SIN HÁBITOS</span>Ve a ➕ Añadir y crea tu primer hábito diario.</div>`;
+    return;
+  }
+  const sorted = [...state.habits].sort((a,b)=> (a.time||"").localeCompare(b.time||""));
+  list.innerHTML = sorted.map(h=>{
+    const done = (h.completedDates||[]).includes(t);
+    const [hh,mm] = (h.time||"08:00").split(":").map(Number);
+    const due = !done && (now.getHours()>hh || (now.getHours()===hh && now.getMinutes()>=mm));
+    const s = streakOf(h);
+    return `<div class="mc card ${done?'done':due?'due':''}">
+      ${dot(h.cat)}
+      <div class="info">
+        <div class="name">${esc(h.name)}</div>
+        <div class="meta"><span class="pill">${h.time}</span>
+          <span>${CATS[h.cat].label}</span>
+          ${s>0?`<span class="streak">🔥 ${s}</span>`:''}
+          ${due?'<span style="color:#ffcf3a">· toca ahora</span>':''}
+        </div>
+      </div>
+      <div class="tick" onclick="completeHabit('${h.id}')">${done?'✔':'⛏'}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderTasks(){
+  const list = document.getElementById('taskList');
+  const pend = state.tasks.filter(x=>!x.done).sort((a,b)=> new Date(a.deadline)-new Date(b.deadline));
+  const done = state.tasks.filter(x=>x.done);
+  const now=new Date();
+  if(state.tasks.length===0){
+    list.innerHTML = `<div class="mc empty"><span class="px">SIN TAREAS</span>Las tareas con fecha límite aparecen aquí. Créalas en ➕ Añadir.</div>`;
+    return;
+  }
+  let html = pend.map(tk=>{
+    const over = now > new Date(tk.deadline);
+    const dl = new Date(tk.deadline).toLocaleString('es-ES',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+    return `<div class="mc card ${over?'overdue':''}">
+      ${dot(tk.cat)}
+      <div class="info">
+        <div class="name">${esc(tk.name)}</div>
+        <div class="meta"><span class="pill">⏰ ${dl}</span><span>${CATS[tk.cat].label}</span>
+          ${over?'<span style="color:#ff6a5a">· VENCIDA</span>':''}</div>
+      </div>
+      <div class="tick" onclick="completeTask('${tk.id}')">⛏</div>
+    </div>`;
+  }).join("");
+  if(done.length){
+    html += `<div class="daylabel" style="margin-top:18px">Completadas (${done.length})</div>` +
+      done.slice().reverse().map(tk=>`<div class="mc card done">${dot(tk.cat)}
+        <div class="info"><div class="name">${esc(tk.name)}</div>
+        <div class="meta"><span>${CATS[tk.cat].label}</span></div></div>
+        <div class="tick" style="background:#2f7d3a;color:#bdffb0">✔</div></div>`).join("");
+  }
+  list.innerHTML = html;
+}
+
+function renderStats(){
+  // últimos 7 días
+  const days=[]; for(let i=6;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); days.push(dateStr(d)); }
+  let totSched=0, totDone=0;
+  const week = document.getElementById('weekChart');
+  week.innerHTML = days.map(day=>{
+    let sched=0,dn=0;
+    for(const h of state.habits){
+      const c=(h.createdAt||"").slice(0,10);
+      if(c && c>day) continue;
+      sched++; if((h.completedDates||[]).includes(day)) dn++;
+    }
+    totSched+=sched; totDone+=dn;
+    const pct = sched? Math.round(dn/sched*100):0;
+    const lbl = new Date(day+"T00:00:00").toLocaleDateString('es-ES',{weekday:'short'}).slice(0,2);
+    return `<div class="dcol"><div class="dpct">${sched?pct+'%':'-'}</div>
+      <div class="bar"><div class="barfill" style="height:${pct}%"></div></div>
+      <div class="dname">${lbl}</div></div>`;
+  }).join("");
+
+  document.getElementById('stWeek').textContent = totSched? Math.round(totDone/totSched*100)+"%" : "0%";
+  let best=0; state.habits.forEach(h=> best=Math.max(best,h.best||0,streakOf(h)));
+  document.getElementById('stStreak').textContent = best;
+  const t=todayStr(); let st=0,sd=0;
+  state.habits.forEach(h=>{ st++; if((h.completedDates||[]).includes(t))sd++; });
+  document.getElementById('stToday').textContent = sd+"/"+st;
+  document.getElementById('stDone').textContent = state.tasks.filter(x=>x.done).length;
+
+  // por categoría (7d)
+  const cs = document.getElementById('catStats');
+  cs.innerHTML = Object.keys(CATS).map(ck=>{
+    let sched=0,dn=0;
+    for(const day of days) for(const h of state.habits){
+      if(h.cat!==ck) continue; const c=(h.createdAt||"").slice(0,10);
+      if(c && c>day) continue; sched++; if((h.completedDates||[]).includes(day)) dn++;
+    }
+    if(sched===0) return "";
+    const pct=Math.round(dn/sched*100);
+    return `<div class="catbar"><div class="top"><span>${CATS[ck].label}</span><span>${pct}%</span></div>
+      <div class="track"><div class="fillc" style="width:${pct}%;background:${CATS[ck].raw}"></div></div></div>`;
+  }).join("") || `<div class="help">Aún no hay hábitos. Los datos aparecen al usar la app.</div>`;
+}
+
+function renderLadder(){
+  const cur = rankIdxFor(state.xp);
+  document.getElementById('ladder').innerHTML = RANKS.map((r,i)=>{
+    const cls = i===cur?'cur':(i>cur?'locked':'');
+    return `<div class="mc rk ${cls}">
+      <div class="block-ico" style="width:40px;height:40px;flex:0 0 40px;${blockStyle(r)}"></div>
+      <div class="nm"><div class="t">${r.name}</div><div class="x">${r.min} XP</div></div>
+      <div class="chk">${i<cur?'✔':i===cur?'▶':'🔒'}</div>
+    </div>`;
+  }).join("");
+}
+
+// ---------- celebración / feedback ----------
+function celebrate(xp, extra){
+  document.getElementById('celeMsg').textContent = extra || PRAISE[Math.floor(Math.random()*PRAISE.length)];
+  document.getElementById('celeXp').textContent = "+"+xp+" XP";
+  const c=document.getElementById('celebrate'); c.classList.add('show');
+  beep(660,0.08); setTimeout(()=>beep(880,0.1),90);
+  if(navigator.vibrate) navigator.vibrate(40);
+  spawnParticles();
+  setTimeout(()=>c.classList.remove('show'),1100);
+}
+function spawnParticles(){
+  const colors=["#6fdc3a","#a8ff6a","#f5c518","#4fd6e0","#a861e6"];
+  const cx=window.innerWidth/2, cy=window.innerHeight/2;
+  for(let i=0;i<22;i++){
+    const p=document.createElement('div'); p.className='particle';
+    p.style.background=colors[i%colors.length]; p.style.left=cx+"px"; p.style.top=cy+"px";
+    document.body.appendChild(p);
+    const ang=Math.random()*Math.PI*2, dist=80+Math.random()*120;
+    const tx=Math.cos(ang)*dist, ty=Math.sin(ang)*dist - 40;
+    p.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${tx}px,${ty}px)`,opacity:0}],
+      {duration:700+Math.random()*300,easing:'cubic-bezier(.2,.8,.3,1)'}).onfinish=()=>p.remove();
+  }
+}
+function showRankUp(idx){
+  const r=RANKS[idx];
+  document.getElementById('ruBlock').setAttribute('style', blockStyle(r));
+  document.getElementById('ruName').textContent = r.name;
+  const ru=document.getElementById('rankup'); 
+  setTimeout(()=>{ ru.classList.add('show');
+    beep(523,0.1); setTimeout(()=>beep(659,0.1),120); setTimeout(()=>beep(784,0.18),240);
+    if(navigator.vibrate)navigator.vibrate([60,40,120]);
+    setTimeout(()=>ru.classList.remove('show'),2200);
+  }, 1150); // tras la celebración del bloque
+}
+let toastTimer;
+function toast(msg){
+  const t=document.getElementById('toast'); t.querySelector('.mc').textContent=msg;
+  t.classList.add('show'); clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ---------- audio ----------
+function beep(freq,dur){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type='square'; o.frequency.value=freq; o.connect(g); g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(0.06,audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+dur);
+    o.start(); o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+
+// ---------- recordatorios (app abierta) ----------
+function checkReminders(){
+  const t=todayStr(); const now=new Date();
+  for(const h of state.habits){
+    if((h.completedDates||[]).includes(t)) continue;
+    const [hh,mm]=(h.time||"08:00").split(":").map(Number);
+    const due = now.getHours()>hh || (now.getHours()===hh && now.getMinutes()>=mm);
+    if(due && !alerted.has(h.id)){
+      alerted.add(h.id);
+      toast("⛏ Toca: "+h.name);
+      beep(440,0.12); if(navigator.vibrate)navigator.vibrate(80);
+    }
+  }
+}
+
+// ---------- navegación ----------
+function go(v){
+  document.querySelectorAll('.view').forEach(s=>s.classList.remove('on'));
+  document.getElementById('v-'+v).classList.add('on');
+  document.querySelectorAll('.slot').forEach(s=>s.classList.toggle('on', s.dataset.v===v));
+  window.scrollTo(0,0);
+}
+function setAddMode(m){
+  addMode=m;
+  document.getElementById('tabHabit').classList.toggle('act',m==='habit');
+  document.getElementById('tabTask').classList.toggle('act',m==='task');
+  document.getElementById('fldTime').style.display = m==='habit'?'block':'none';
+  document.getElementById('fldDeadline').style.display = m==='task'?'block':'none';
+}
+function buildCatPicker(){
+  document.getElementById('catPick').innerHTML = Object.keys(CATS).map(k=>
+    `<div class="mc catopt ${k===addCat?'act':''}" data-c="${k}" onclick="pickCat('${k}')">
+      <span class="sw" style="background:${CATS[k].raw}"></span>${CATS[k].label}${CATS[k].weight>1?' ⭐':''}</div>`).join("");
+}
+function pickCat(k){ addCat=k; document.querySelectorAll('.catopt').forEach(e=>e.classList.toggle('act',e.dataset.c===k)); }
+
+function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// ---------- init ----------
+(async function init(){
+  state = await load();
+  if(!state){ state = freshState(); await save(); }
+  const penalized = processMissedDays();
+  checkOverdueTasks();
+  if(penalized) await save();
+  buildCatPicker();
+  // fecha límite por defecto: mañana 18:00
+  const d=new Date(); d.setDate(d.getDate()+1); d.setHours(18,0,0,0);
+  document.getElementById('addDeadline').value = d.toISOString().slice(0,16);
+  render();
+  checkReminders();
+  setInterval(()=>{ checkOverdueTasks(); checkReminders(); renderHoy(); }, 30000);
+  // desbloquear audio al primer toque
+  document.body.addEventListener('pointerdown',()=>{ if(!audioCtx){try{audioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}} },{once:true});
+})();
+</script>
